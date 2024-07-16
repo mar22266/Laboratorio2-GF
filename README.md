@@ -8,6 +8,7 @@ This project implements Conway's Game of Life on a 100x100 grid using Rust and t
 
 ![Code GIF](GifCodigoCompilando.gif)
 *Visual representation of the code running*
+
 ## Prerequisites
 
 To run this simulation, you need to have Rust installed on your machine. If Rust is not installed, you can install it from the [official website](https://www.rust-lang.org/tools/install).
