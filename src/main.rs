@@ -4,26 +4,26 @@ use std::time::{Duration, Instant};
 mod framebuffer;
 use framebuffer::Framebuffer;
 
-const WIDTH: usize = 800;
-const HEIGHT: usize = 600;
-const CELL_SIZE: usize = 20;  // Tamaño de cada célula para mayor visibilidad
+const WIDTH: usize = 100;
+const HEIGHT: usize = 100;
+const CELL_SIZE: usize = 30;  
 
 fn initialize_game_of_life(framebuffer: &mut Framebuffer) {
     let patterns = [
-        (&GLIDER, (10, 10)),
-        (&BEE_HIVE, (50, 50)),
-        (&LOAF, (90, 90)),
-        (&BOAT, (130, 130)),
-        (&TUB, (170, 170)),
-        (&BLINKER, (210, 210)),
-        (&TOAD, (250, 250)),
-        (&BEACON, (290, 290)),
-        (&LWSS, (330, 330)),
-        (&BLOCK, (370, 370)),
+        (&GLIDER, (1, 1)),
+        (&BEE_HIVE, (10, 1)),
+        (&LOAF, (20, 1)),
+        (&BOAT, (30, 1)),
+        (&TUB, (40, 1)),
+        (&BLINKER, (50, 1)),
+        (&TOAD, (60, 1)),
+        (&BEACON, (70, 1)),
+        (&LWSS, (80, 1)),
+        (&BLOCK, (90, 1)),
     ];
 
-    for &(pattern, position) in &patterns {
-        initialize_pattern(framebuffer, pattern, position);
+    for &(pattern, offset) in &patterns {
+        initialize_pattern(framebuffer, pattern, offset);
     }
 }
 const GLIDER: &[(usize, usize)] = &[(1, 0), (2, 1), (0, 2), (1, 2), (2, 2)];
@@ -37,13 +37,11 @@ const BEACON: &[(usize, usize)] = &[(0, 0), (1, 0), (0, 1), (1, 1), (2, 2), (3, 
 const LWSS: &[(usize, usize)] = &[(1, 0), (4, 0), (0, 1), (0, 2), (4, 2), (0, 3), (1, 3), (2, 3), (3, 3)];
 const BLOCK: &[(usize, usize)] = &[(0, 0), (1, 0), (0, 1), (1, 1)];
 
-fn initialize_pattern(framebuffer: &mut Framebuffer, pattern: &[(usize, usize)], position: (usize, usize)) {
+fn initialize_pattern(framebuffer: &mut Framebuffer, pattern: &[(usize, usize)], offset: (usize, usize)) {
     for &(x, y) in pattern {
         for dx in 0..CELL_SIZE {
             for dy in 0..CELL_SIZE {
-                let px = x * CELL_SIZE + dx + position.0;
-                let py = y * CELL_SIZE + dy + position.1;
-                framebuffer.set_pixel(px, py, 0xFFFFFF); // Set cells as alive (white)
+                framebuffer.set_pixel(x * CELL_SIZE + dx + offset.0, y * CELL_SIZE + dy + offset.1, 0xFFFFFF);
             }
         }
     }
@@ -58,41 +56,33 @@ fn render(framebuffer: &mut Framebuffer) {
             let alive = framebuffer.buffer[idx] == 0xFFFFFF;
             let neighbors = count_neighbors(x, y, &framebuffer);
 
-            // Apply Conway's Game of Life rules
-            if alive && (neighbors == 2 || neighbors == 3) {
-                next_state[idx] = 0xFFFFFF; // Cell survives
+            if alive && (neighbors < 2 || neighbors > 3) {
+                next_state[idx] = 0x000000; // Cell dies
             } else if !alive && neighbors == 3 {
                 next_state[idx] = 0xFFFFFF; // Cell is born
             } else {
-                next_state[idx] = 0x000000; // Cell dies or remains dead
+                next_state[idx] = framebuffer.buffer[idx]; // Cell continues in its current state
             }
         }
     }
 
-    // Apply the next state to the framebuffer
     for y in 0..HEIGHT {
         for x in 0..WIDTH {
             let idx = y * WIDTH + x;
-            if next_state[idx] != framebuffer.buffer[idx] {
-                framebuffer.set_pixel(x, y, next_state[idx]);
-            }
+            framebuffer.set_pixel(x, y, next_state[idx]);
         }
     }
 }
 
 fn count_neighbors(x: usize, y: usize, framebuffer: &Framebuffer) -> usize {
     let mut count = 0;
-    for i in 0..3 {
-        for j in 0..3 {
-            if i == 1 && j == 1 { continue; }
-            let nx = x as i32 + i - 1;
-            let ny = y as i32 + j - 1;
-            if nx >= 0 && nx < WIDTH as i32 && ny >= 0 && ny < HEIGHT as i32 {
-                let idx = (ny as usize) * WIDTH + nx as usize;
-                if framebuffer.buffer[idx] == 0xFFFFFF {
-                    count += 1;
-                }
-            }
+    let directions = [(-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 1), (1, -1), (1, 0), (1, 1)];
+    for (dx, dy) in directions.iter() {
+        let nx = (x as isize + dx + WIDTH as isize) % WIDTH as isize;
+        let ny = (y as isize + dy + HEIGHT as isize) % HEIGHT as isize;
+        let idx = (ny as usize) * WIDTH + nx as usize;
+        if framebuffer.buffer[idx] == 0xFFFFFF {
+            count += 1;
         }
     }
     count
@@ -100,6 +90,7 @@ fn count_neighbors(x: usize, y: usize, framebuffer: &Framebuffer) -> usize {
 
 fn main() {
     let mut framebuffer = Framebuffer::new(WIDTH, HEIGHT, 0x000000);
+
     initialize_game_of_life(&mut framebuffer);
 
     let mut window = Window::new(
@@ -109,15 +100,10 @@ fn main() {
         WindowOptions::default(),
     ).unwrap();
 
-    let frame_delay = Duration::from_millis(100); // Timing for animation visibility
+    let frame_delay = Duration::from_millis(16);
     while window.is_open() && !window.is_key_down(Key::Escape) {
-        let now = Instant::now();
-
         render(&mut framebuffer);
         window.update_with_buffer(&framebuffer.buffer, WIDTH, HEIGHT).unwrap();
-
-        while now.elapsed() < frame_delay {
-            std::thread::sleep(Duration::from_millis(1));
-        }
+        std::thread::sleep(frame_delay);
     }
 }
