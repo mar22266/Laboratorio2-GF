@@ -1,0 +1,9 @@
+[package]
+name = "hello_world"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+nalgebra-glm = "0.9"  # Check for the latest version on crates.io
+image = "0.23"
+minifb = "0.27.0"
