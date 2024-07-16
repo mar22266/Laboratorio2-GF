@@ -6,7 +6,7 @@ This project implements Conway's Game of Life on a 100x100 grid using Rust and t
 ![Gameplay GIF](GifJuego.gif)
 *Gameplay of Conway's Game of Life*
 
-![Code GIF](GifCodigo.gif)
+![Code GIF](GifCodigoCompilando.gif)
 *Visual representation of the code running*
 ## Prerequisites
 
